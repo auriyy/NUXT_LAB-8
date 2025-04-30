@@ -1,152 +1,238 @@
+<script setup lang="ts">
+import { ref, computed, h, resolveComponent } from 'vue'
+import { useFetch } from '@vueuse/core'
+import type { TableColumn } from '@nuxt/ui'
+
+definePageMeta({
+  title: 'Список продуктів'
+})
+
+interface Product {
+  id: number
+  title: string
+  description: string
+  price: number
+  rating: number
+  brand: string
+  category: string
+  thumbnail: string
+  [key: string]: any
+}
+
+const UButton = resolveComponent('UButton')
+
+const searchQuery = ref('')
+const currentPage = ref(1)
+const perPage = 5
+const sortField = ref('')
+const sortAsc = ref(true)
+
+const { data } = await useFetch('https://dummyjson.com/products?limit=200').get().json()
+
+const products = computed<Product[]>(() => data.value?.products || [])
+
+const filtered = computed(() => {
+  const q = searchQuery.value.toLowerCase()
+  if (!q) return products.value
+
+  return products.value.filter((product: Product) =>
+    Object.values(product).some(val =>
+      String(val).toLowerCase().includes(q)
+    )
+  )
+})
+
+const sortBy = (field: string) => {
+  sortField.value = sortField.value === field ? field : field
+  sortAsc.value = sortField.value === field ? !sortAsc.value : true
+  currentPage.value = 1
+}
+
+const sorted = computed(() => {
+  if (!sortField.value) return filtered.value
+
+  return [...filtered.value].sort((a: Product, b: Product) => {
+    const aVal = a[sortField.value]
+    const bVal = b[sortField.value]
+
+    if (sortAsc.value) {
+      return aVal > bVal ? 1 : aVal < bVal ? -1 : 0
+    } else {
+      return aVal < bVal ? 1 : aVal > bVal ? -1 : 0
+    }
+  })
+})
+
+const paginated = computed(() => {
+  const start = (currentPage.value - 1) * perPage
+  return sorted.value.slice(start, start + perPage)
+})
+
+const columns: TableColumn<Product>[] = [
+  {
+    accessorKey: 'thumbnail',
+    header: 'Photo',
+    cell: ({ row }) =>
+      h('img', {
+        src: row.getValue('thumbnail'),
+        class: 'w-[90px] h-[90px] object-cover rounded border border-gray-700'
+      })
+  },
+  {
+    accessorKey: 'title',
+    header: () =>
+      h(
+        UButton,
+        {
+          color: 'blue',
+          variant: 'ghost',
+          class: 'text-blue-300',
+          icon:
+            sortField.value === 'title'
+              ? sortAsc.value
+                ? 'i-lucide-arrow-up'
+                : 'i-lucide-arrow-down'
+              : 'i-lucide-arrow-up-down',
+          onClick: () => sortBy('title')
+        },
+        () => 'Title'
+      )
+  },
+  {
+    accessorKey: 'description',
+    header: () =>
+      h(
+        UButton,
+        {
+          color: 'blue',
+          variant: 'ghost',
+          class: 'text-blue-300',
+          icon:
+            sortField.value === 'description'
+              ? sortAsc.value
+                ? 'i-lucide-arrow-up'
+                : 'i-lucide-arrow-down'
+              : 'i-lucide-arrow-up-down',
+          onClick: () => sortBy('description')
+        },
+        () => 'Description'
+        ),
+    cell: ({ row }) =>
+      h('div', { class: 'text-gray-400 max-w-[300px] truncate' }, row.getValue('description'))
+  },
+  {
+    accessorKey: 'price',
+    header: () =>
+      h(
+        UButton,
+        {
+          color: 'blue',
+          variant: 'ghost',
+          class: 'text-blue-300',
+          icon:
+            sortField.value === 'price'
+              ? sortAsc.value
+                ? 'i-lucide-arrow-up'
+                : 'i-lucide-arrow-down'
+              : 'i-lucide-arrow-up-down',
+          onClick: () => sortBy('price')
+        },
+        () => 'Price'
+      ),
+    cell: ({ row }) =>
+      h('span', { class: 'text-gray-300 font-semibold' }, `€${row.getValue('price')}`)
+  },
+  {
+    accessorKey: 'rating',
+    header: () =>
+      h(
+        UButton,
+        {
+          color: 'blue',
+          variant: 'ghost',
+          class: 'text-blue-300',
+          icon:
+            sortField.value === 'rating'
+              ? sortAsc.value
+                ? 'i-lucide-arrow-up'
+                : 'i-lucide-arrow-down'
+              : 'i-lucide-arrow-up-down',
+          onClick: () => sortBy('rating')
+        },
+        () => 'Rating'
+      ),
+    cell: ({ row }) =>
+      h(
+        'span',
+        {
+          class: [
+            'font-bold',
+            (row.getValue('rating') as number) < 4.5 ? 'text-red-400' : 'text-green-400'
+          ]
+        },
+        `⭐ ${row.getValue('rating')}`
+      )
+  },
+  {
+    accessorKey: 'brand',
+    header: () =>
+      h(
+        UButton,
+        {
+          color: 'blue',
+          variant: 'ghost',
+          class: 'text-blue-300',
+          icon:
+            sortField.value === 'brand'
+              ? sortAsc.value
+                ? 'i-lucide-arrow-up'
+                : 'i-lucide-arrow-down'
+              : 'i-lucide-arrow-up-down',
+          onClick: () => sortBy('brand')
+        },
+        () => 'Brand'
+      )
+  },
+  {
+    accessorKey: 'category',
+    header: () =>
+      h(
+        UButton,
+        {
+          color: 'blue',
+          variant: 'ghost',
+          class: 'text-blue-300',
+          icon:
+            sortField.value === 'category'
+              ? sortAsc.value
+                ? 'i-lucide-arrow-up'
+                : 'i-lucide-arrow-down'
+              : 'i-lucide-arrow-up-down',
+          onClick: () => sortBy('category')
+        },
+        () => 'Category'
+      )
+  }
+]
+</script>
+
 <template>
-    <div class="p-4 space-y-4">
-        <h1 class="text-2xl font-bold">Список продуктів</h1>
+  <div class="p-4 space-y-6 bg-black min-h-screen text-gray-200">
+    <h1 class="text-2xl font-bold flex justify-center text-blue-400">Список продуктів</h1>
+
+    <div class="flex justify-center">
+      <UInput v-model="searchQuery" icon="i-lucide-search" placeholder="Пошук" class="max-w-md" />
     </div>
 
-    <div class="p-4 space-y-4">
-      <label for="search" class="sr-only">Пошук:</label>
-      <input
-        type="text"
-        v-model="searchQuery"
-        placeholder="Пошук..."
+    <UTable :data="paginated" :columns="columns" class="bg-gray-900 rounded-lg shadow-sm" />
+
+    <div class="flex justify-center">
+      <UPagination
+        :total="sorted.length"
+        :page="currentPage"
+        :items-per-page="perPage"
+        @update:page="val => (currentPage = val)"
       />
-  
-      <table class="w-full border-collapse text-sm shadow-sm">
-        <thead>
-          <tr class="text-left">
-            <th class="p-2 w-[110px]">Фото</th>
-            <th class="p-2 cursor-pointer" @click="sortBy('title')">
-              Назва
-              <span v-if="sortField === 'title'">{{ sortAsc ? '⬆️' : '⬇️' }}</span>
-            </th>
-            <th class="p-2 cursor-pointer" @click="sortBy('description')">
-              Опис
-              <span v-if="sortField === 'description'">{{ sortAsc ? '⬆️' : '⬇️' }}</span>
-            </th>
-            <th class="p-2 cursor-pointer" @click="sortBy('price')">
-              Ціна
-              <span v-if="sortField === 'price'">{{ sortAsc ? '⬆️' : '⬇️' }}</span>
-            </th>
-            <th class="p-2 cursor-pointer" @click="sortBy('rating')">
-              Оцінка
-              <span v-if="sortField === 'rating'">{{ sortAsc ? '⬆️' : '⬇️' }}</span>
-            </th>
-            <th class="p-2 cursor-pointer" @click="sortBy('brand')">
-              Бренд
-              <span v-if="sortField === 'brand'">{{ sortAsc ? '⬆️' : '⬇️' }}</span>
-            </th>
-            <th class="p-2 cursor-pointer" @click="sortBy('category')">
-              Категорія
-              <span v-if="sortField === 'category'">{{ sortAsc ? '⬆️' : '⬇️' }}</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr
-            v-for="item in paginated"
-            :key="item.id"
-            class="border-b transition"
-          >
-            <td class="p-2">
-              <img
-                :src="item.thumbnail"
-                alt="thumb"
-                class="w-[90px] h-[90px] object-cover rounded"
-              />
-            </td>
-            <td class="p-2 font-medium">{{ item.title }}</td>
-            <td class="p-2 text-gray-100 max-w-[300px] truncate">
-              {{ item.description }}
-            </td>
-            <td class="p-2 font-semibold text-gray-400">€{{ item.price }}</td>
-            <td
-              class="p-2 font-bold"
-              :class="{
-                'text-red-500': item.rating < 4.5,
-                'text-green-600': item.rating >= 4.5
-              }"
-            >
-              {{ item.rating }}
-            </td>
-            <td class="p-2">{{ item.brand }}</td>
-            <td class="p-2">{{ item.category }}</td>
-          </tr>
-        </tbody>
-      </table>
-  
-      <div class="flex justify-center border-t border-(--ui-border) pt-4">
-        <UPagination
-          :total="sorted.length"
-          :page="currentPage"
-          :items-per-page="perPage"
-          @update:page="val => currentPage = val"
-        />
-      </div>
     </div>
-  </template>
-  
-  <script setup lang="ts">
-  import { ref, computed, onMounted } from 'vue'
-  definePageMeta({
-  title: 'Список продуктів'  
-})
-  
-  const products = ref<any[]>([])
-  const searchQuery = ref('')
-  const currentPage = ref(1)
-  const perPage = 5
-  const sortField = ref('')
-  const sortAsc = ref(true)
-  
-  const loadProducts = async () => {
-      const res = await fetch('https://dummyjson.com/products?limit=200')
-      const data = await res.json()
-      products.value = data.products || []
-    }
-  
-  
-  onMounted(loadProducts)
-  
-  const filtered = computed(() => {
-    const query = searchQuery.value.toLowerCase()
-    if (!query) return products.value
-  
-    return products.value.filter(product =>
-      Object.values(product).some(val =>
-        String(val).toLowerCase().includes(query)
-      )
-    )
-  })
-  
-  const sortBy = (field: string) => {
-    sortField.value = sortField.value === field ? field : field;
-    sortAsc.value = sortField.value === field ? !sortAsc.value : true;
-    currentPage.value = 1;
-  };
-  
-  const sorted = computed(() => {
-    if (!sortField.value) return filtered.value;
-  
-    return filtered.value.slice().sort((a, b) => {
-      const FirstField = a[sortField.value];
-      const SecondField = b[sortField.value];
-      
-    if (sortAsc.value) {
-      if (FirstField > SecondField) return 1;
-      if (FirstField < SecondField) return -1;
-  
-      return 0;
-    } else {
-      if (FirstField < SecondField) return 1;
-      if (FirstField > SecondField) return -1;
-      return 0;
-    }
-      });
-    });
-  
-  const paginated = computed(() => {
-    const startIndex = (currentPage.value - 1) * perPage;
-    return sorted.value.slice(startIndex, startIndex + perPage);
-  });
-  
-  </script>  
+  </div>
+</template>
